@@ -1,5 +1,6 @@
 package angulo.javier.taskslist
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -55,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             adapter.notifyDataSetChanged()
             taskEditText.setText("")
         } else {
-            Toast.makeText(this, "There must be a task to add", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Task description cannot be empty", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -70,8 +71,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onUpdateButtonClick(view: View) {
-        // TODO Implement update task
         val position = view.tag as Int
-        Toast.makeText(this, "Update Clicked at position $position", Toast.LENGTH_SHORT).show()
+        val taskDesc = tasksArraylist[position]
+        val task = db.taskDAO().getTask(taskDesc)
+
+        showUpdateTaskDialog(task, position)
+    }
+
+    private fun showUpdateTaskDialog(task: Task, position: Int) {
+        val editText = EditText(this)
+        editText.setText(task.desc)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Update Task")
+            .setMessage("Enter the updated task description:")
+            .setView(editText)
+            .setPositiveButton("Update") { _, _ ->
+                val updatedDesc = editText.text.toString()
+                if (updatedDesc.isNotEmpty()) {
+                    task.desc = updatedDesc
+                    db.taskDAO().updateTask(task)
+                    tasksArraylist[position] = updatedDesc
+                    adapter.notifyDataSetChanged()
+                } else {
+                    Toast.makeText(this, "Task description cannot be empty", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
     }
 }
