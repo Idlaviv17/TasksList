@@ -1,73 +1,77 @@
 package angulo.javier.taskslist
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ListView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.room.Room
 
 class MainActivity : AppCompatActivity() {
-    lateinit var et_tarea: EditText
-    lateinit var btn_agregar: Button
-    lateinit var listview_tareas: ListView
-    lateinit var lista_tareas: ArrayList<String>
-    lateinit var adaptor: ArrayAdapter<String>
+    lateinit var taskEditText: EditText
+    lateinit var addBtn: Button
+    lateinit var tasksListView: ListView
+    lateinit var tasksArraylist: ArrayList<String>
+    lateinit var adapter: CustomAdapter
     lateinit var db: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        et_tarea = findViewById(R.id.et_tarea)
-        btn_agregar = findViewById(R.id.btn_agregar)
-        listview_tareas = findViewById(R.id.listview_tareas)
+        taskEditText = findViewById(R.id.editTextTask)
+        addBtn = findViewById(R.id.buttonAdd)
+        tasksListView = findViewById(R.id.listViewTasks)
 
-        lista_tareas = ArrayList()
+        tasksArraylist = ArrayList()
 
         db = Room.databaseBuilder(
             applicationContext,
-            AppDatabase::class.java, "tareas-db"
+            AppDatabase::class.java, "tasks-db"
         ).allowMainThreadQueries().build()
 
-        cargarTareas()
+        loadTasks()
 
-        adaptor = ArrayAdapter(this, android.R.layout.simple_list_item_1, lista_tareas)
-        listview_tareas.adapter = adaptor
+        adapter = CustomAdapter(this, tasksArraylist)
+        tasksListView.adapter = adapter
+    }
 
-        btn_agregar.setOnClickListener {
-            var tarea_str = et_tarea.text.toString()
-
-            if(!tarea_str.isNullOrEmpty()) {
-                var tarea = Tarea(desc = tarea_str)
-                db.tareaDao().agregarTarea(tarea)
-                lista_tareas.add(tarea_str)
-                adaptor.notifyDataSetChanged()
-                et_tarea.setText("")
-            } else {
-                Toast.makeText(this, "llenar campo", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        listview_tareas.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
-            var tarea_desc = lista_tareas[position]
-
-            var tarea = db.tareaDao().getTarea(tarea_desc)
-
-            db.tareaDao().eliminarTarea(tarea)
-
-            lista_tareas.removeAt(position)
-            adaptor.notifyDataSetChanged()
+    private fun loadTasks() {
+        var dbList = db.taskDAO().getTasks()
+        for(task in dbList) {
+            tasksArraylist.add(task.desc)
         }
     }
 
-    private fun cargarTareas() {
-        var lista_db = db.tareaDao().obtenerTareas()
-        for(tarea in lista_db) {
-            lista_tareas.add(tarea.desc)
+    fun onAddButtonClick(view: View) {
+        var taskStr = taskEditText.text.toString()
+
+        if(!taskStr.isNullOrEmpty()) {
+            var task = Task(desc = taskStr)
+            db.taskDAO().addTask(task)
+            tasksArraylist.add(taskStr)
+            adapter.notifyDataSetChanged()
+            taskEditText.setText("")
+        } else {
+            Toast.makeText(this, "There must be a task to add", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun onDeleteButtonClick(view: View) {
+        val position = view.tag as Int
+        var taskDesc = tasksArraylist[position]
+        var task = db.taskDAO().getTask(taskDesc)
+
+        db.taskDAO().deleteTask(task)
+        tasksArraylist.removeAt(position)
+        adapter.notifyDataSetChanged()
+    }
+
+    fun onUpdateButtonClick(view: View) {
+        // TODO Implement update task
+        val position = view.tag as Int
+        Toast.makeText(this, "Update Clicked at position $position", Toast.LENGTH_SHORT).show()
     }
 }
